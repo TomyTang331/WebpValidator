@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::os::raw::c_char;
 
-/// WebP图片信息结构体
+/// WebP image information
 #[derive(Debug)]
 pub struct WebpInfo {
     pub width: u32,
@@ -26,7 +26,7 @@ impl WebpInfo {
     }
 }
 
-/// 校验WebP图片格式是否合法
+/// Validate WebP image format
 pub fn validate_webp(path: &str) -> Result<WebpInfo, String> {
     let file = File::open(path).map_err(|e| format!("failed to open file: {}", e))?;
     let reader = BufReader::new(file);
@@ -37,7 +37,7 @@ pub fn validate_webp(path: &str) -> Result<WebpInfo, String> {
     }
 }
 
-/// C兼容的WebP校验结果结构体
+/// C-compatible WebP validation result
 #[repr(C)]
 pub struct WebpValidationResult {
     pub is_valid: bool,
@@ -49,12 +49,12 @@ pub struct WebpValidationResult {
     pub error_message: *mut c_char,
 }
 
-/// 通过FFI校验WebP文件
+/// Validate WebP file via FFI
 ///
 /// # Safety
-/// 调用方必须确保：
-/// 1. path是有效的以null结尾的C字符串
-/// 2. 使用free_error_message释放error_message
+/// Caller must ensure:
+/// 1. `path` is a valid null-terminated C string
+/// 2. `error_message` is freed using `free_error_message`
 #[no_mangle]
 pub unsafe extern "C" fn validate_webp_ffi(path: *const c_char) -> WebpValidationResult {
     if path.is_null() {
@@ -107,12 +107,12 @@ pub unsafe extern "C" fn validate_webp_ffi(path: *const c_char) -> WebpValidatio
     }
 }
 
-/// 释放validate_webp_ffi分配的错误消息内存
+/// Free error message memory allocated by validate_webp_ffi
 ///
 /// # Safety
-/// 调用方必须确保：
-/// 1. error_message是由validate_webp_ffi返回的指针
-/// 2. 每个指针只调用此函数一次
+/// Caller must ensure:
+/// 1. `error_message` was returned by `validate_webp_ffi`
+/// 2. This function is called only once per pointer
 #[no_mangle]
 pub unsafe extern "C" fn free_error_message(error_message: *mut c_char) {
     if !error_message.is_null() {

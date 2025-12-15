@@ -15,8 +15,8 @@ import (
 	_ "golang.org/x/image/webp"
 )
 
-// ValidateWebpByStdLib 使用Go标准库验证图片
-// 注意：Go标准库的webp包不支持动态WebP，会报错
+// ValidateWebpByStdLib validates WebP using Go standard library.
+// Note: Go stdlib's webp package does not support animated WebP.
 func ValidateWebpByStdLib(path string) error {
 	data, err := os.ReadFile(path)
 	if err != nil {
@@ -74,12 +74,11 @@ func TestValidateNonexistentFile(t *testing.T) {
 	t.Logf("nonexistent file correctly handled: %s", info.Error)
 }
 
-// TestCompareWithStdLib 测试动态WebP，证明Go标准库无法处理
-// 标准库的image.Decode对动态WebP会报错
+// TestCompareWithStdLib demonstrates that Go stdlib cannot handle animated WebP.
 func TestCompareWithStdLib(t *testing.T) {
 	dynamicWebpPath := "../images/dynamic.webp"
 
-	// 1. 使用Rust库验证
+	// Validate using Rust library
 	rustResult := ValidateWebp(dynamicWebpPath)
 	require.True(t, rustResult.IsValid, "rust library should validate dynamic webp")
 	require.True(t, rustResult.IsAnimated, "rust library should detect animation")
@@ -87,7 +86,7 @@ func TestCompareWithStdLib(t *testing.T) {
 	t.Logf("rust library result: valid=%v, animated=%v, frames=%d",
 		rustResult.IsValid, rustResult.IsAnimated, rustResult.NumFrames)
 
-	// 2. 使用Go标准库验证
+	// Validate using Go standard library
 	stdlibErr := ValidateWebpByStdLib(dynamicWebpPath)
 	assert.Error(t, stdlibErr, "golang stdlib should fail on animated webp")
 	if stdlibErr != nil {
@@ -95,11 +94,11 @@ func TestCompareWithStdLib(t *testing.T) {
 		t.Logf("this proves golang stdlib cannot handle animated webp files")
 	}
 
-	t.Log("conclusion: rust library has full webp support including animation")
-	t.Log("golang stdlib lacks animated webp support")
+	t.Log("Conclusion: Rust library has full WebP support including animation")
+	t.Log("Go stdlib lacks animated WebP support")
 }
 
-// BenchmarkValidateWebp 性能测试
+// BenchmarkValidateWebp measures performance of Rust library validation
 func BenchmarkValidateWebp(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		ValidateWebp("../images/static.webp")

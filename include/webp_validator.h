@@ -10,34 +10,32 @@ extern "C"
 #endif
 
     /**
-     * WebP校验结果
+     * WebP validation result
      */
     typedef struct
     {
-        bool is_valid;       // 是否为合法的WebP文件
-        uint32_t width;      // 图片宽度
-        uint32_t height;     // 图片高度
-        bool has_alpha;      // 是否有透明通道
-        bool is_animated;    // 是否为动态WebP
-        uint32_t num_frames; // 帧数 (动态WebP)
-        char *error_message; // 错误信息 (is_valid为true时为NULL)
-                             // 使用free_error_message()释放内存
+        bool is_valid;       // Whether file is valid WebP
+        uint32_t width;      // Image width
+        uint32_t height;     // Image height
+        bool has_alpha;      // Whether has alpha channel
+        bool is_animated;    // Whether is animated WebP
+        uint32_t num_frames; // Number of frames (for animated WebP)
+        char *error_message; // Error message (NULL if is_valid is true)
+                             // Free using free_error_message()
     } WebpValidationResult;
 
     /**
-     * 校验WebP图片文件
+     * Validate WebP image file
      *
-     * @param path WebP文件路径 (以null结尾的C字符串)
+     * @param path WebP file path (null-terminated C string)
      * @return WebpValidationResult
-     *
      */
     WebpValidationResult validate_webp_ffi(const char *path);
 
     /**
-     * 释放validate_webp_ffi分配的错误消息内存
+     * Free error message memory allocated by validate_webp_ffi
      *
-     * @param error_message WebpValidationResult的*error_message
-     *
+     * @param error_message Pointer from WebpValidationResult.error_message
      */
     void free_error_message(char *error_message);
 
