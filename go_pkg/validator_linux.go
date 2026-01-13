@@ -8,7 +8,6 @@ package main
 #include <stdlib.h>
 */
 import "C"
-import "unsafe"
 
 type WebpInfo struct {
 	IsValid    bool
@@ -20,11 +19,18 @@ type WebpInfo struct {
 	Error      string
 }
 
-func ValidateWebp(path string) WebpInfo {
-	cPath := C.CString(path)
-	defer C.free(unsafe.Pointer(cPath))
+func ValidateWebp(data []byte) WebpInfo {
+	if len(data) == 0 {
+		return WebpInfo{
+			IsValid: false,
+			Error:   "data is empty",
+		}
+	}
 
-	result := C.validate_webp_ffi(cPath)
+	cData := C.CBytes(data)
+	defer C.free(cData)
+
+	result := C.validate_webp_ffi((*C.uint8_t)(cData), C.size_t(len(data)))
 
 	info := WebpInfo{
 		IsValid:    bool(result.is_valid),

@@ -32,7 +32,9 @@ func ValidateWebpByStdLib(path string) error {
 }
 
 func TestValidateStaticWebp(t *testing.T) {
-	info := ValidateWebp("../images/static.webp")
+	data, err := os.ReadFile("../images/static.webp")
+	require.NoError(t, err)
+	info := ValidateWebp(data)
 
 	assert.True(t, info.IsValid, "static webp should be valid")
 	assert.False(t, info.IsAnimated, "static webp should not be animated")
@@ -44,7 +46,9 @@ func TestValidateStaticWebp(t *testing.T) {
 }
 
 func TestValidateDynamicWebp(t *testing.T) {
-	info := ValidateWebp("../images/dynamic.webp")
+	data, err := os.ReadFile("../images/dynamic.webp")
+	require.NoError(t, err)
+	info := ValidateWebp(data)
 
 	assert.True(t, info.IsValid, "dynamic webp should be valid")
 	assert.True(t, info.IsAnimated, "dynamic webp should be animated")
@@ -56,7 +60,9 @@ func TestValidateDynamicWebp(t *testing.T) {
 }
 
 func TestValidateFakeWebp(t *testing.T) {
-	info := ValidateWebp("../images/fake.webp")
+	data, err := os.ReadFile("../images/fake.webp")
+	require.NoError(t, err)
+	info := ValidateWebp(data)
 
 	assert.False(t, info.IsValid, "fake webp should be invalid")
 	assert.NotEmpty(t, info.Error, "fake webp should have error message")
@@ -66,12 +72,18 @@ func TestValidateFakeWebp(t *testing.T) {
 }
 
 func TestValidateNonexistentFile(t *testing.T) {
-	info := ValidateWebp("../images/nonexistent.webp")
+	// For nonexistent file, we can't read it, so we can't pass bytes.
+	// The Rust side no longer handles file opening, so this test case changes.
+	// We should test that ValidateWebp handles empty or invalid data gracefully if we want.
+	// But strictly speaking, the responsibility of opening the file is now on the caller (Go side).
+	// So we can test what happens if we pass empty bytes or garbage bytes.
 
-	assert.False(t, info.IsValid, "nonexistent file should be invalid")
-	assert.NotEmpty(t, info.Error, "nonexistent file should have error message")
+	// Let's test empty bytes
+	info := ValidateWebp([]byte{})
+	assert.False(t, info.IsValid, "empty data should be invalid")
+	assert.NotEmpty(t, info.Error, "empty data should have error message")
 
-	t.Logf("nonexistent file correctly handled: %s", info.Error)
+	t.Logf("empty data correctly handled: %s", info.Error)
 }
 
 // TestCompareWithStdLib demonstrates that Go stdlib cannot handle animated WebP.
@@ -79,7 +91,9 @@ func TestCompareWithStdLib(t *testing.T) {
 	dynamicWebpPath := "../images/dynamic.webp"
 
 	// Validate using Rust library
-	rustResult := ValidateWebp(dynamicWebpPath)
+	data, err := os.ReadFile(dynamicWebpPath)
+	require.NoError(t, err)
+	rustResult := ValidateWebp(data)
 	require.True(t, rustResult.IsValid, "rust library should validate dynamic webp")
 	require.True(t, rustResult.IsAnimated, "rust library should detect animation")
 	require.Greater(t, rustResult.NumFrames, uint32(1), "rust library should detect multiple frames")
@@ -100,8 +114,13 @@ func TestCompareWithStdLib(t *testing.T) {
 
 // BenchmarkValidateWebp measures performance of Rust library validation
 func BenchmarkValidateWebp(b *testing.B) {
+	data, err := os.ReadFile("../images/static.webp")
+	if err != nil {
+		b.Fatal(err)
+	}
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		ValidateWebp("../images/static.webp")
+		ValidateWebp(data)
 	}
 }
 

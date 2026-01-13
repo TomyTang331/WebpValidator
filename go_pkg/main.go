@@ -1,6 +1,9 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+)
 
 func main() {
 	fmt.Println("=== WebP Validator - Go Calling Rust ===")
@@ -18,7 +21,13 @@ func main() {
 		fmt.Printf("testing: %s\n", test.description)
 		fmt.Printf("  file: %s\n", test.path)
 
-		info := ValidateWebp(test.path)
+		data, err := os.ReadFile(test.path)
+		if err != nil {
+			fmt.Printf("  error reading file: %v\n\n", err)
+			continue
+		}
+
+		info := ValidateWebp(data)
 
 		if info.IsValid {
 			fmt.Println("  result: valid webp file")

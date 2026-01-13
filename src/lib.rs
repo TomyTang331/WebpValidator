@@ -1,7 +1,6 @@
 use image_webp::WebPDecoder;
-use std::ffi::{CStr, CString};
-use std::fs::File;
-use std::io::BufReader;
+use std::ffi::CString;
+use std::io::Cursor;
 use std::os::raw::c_char;
 
 /// WebP image information
@@ -15,7 +14,7 @@ pub struct WebpInfo {
 }
 
 impl WebpInfo {
-    fn new_valid(decoder: &WebPDecoder<BufReader<File>>) -> Self {
+    fn new_valid(decoder: &WebPDecoder<Cursor<&[u8]>>) -> Self {
         WebpInfo {
             width: decoder.dimensions().0,
             height: decoder.dimensions().1,
@@ -27,9 +26,8 @@ impl WebpInfo {
 }
 
 /// Validate WebP image format
-pub fn validate_webp(path: &str) -> Result<WebpInfo, String> {
-    let file = File::open(path).map_err(|e| format!("failed to open file: {}", e))?;
-    let reader = BufReader::new(file);
+pub fn validate_webp(data: &[u8]) -> Result<WebpInfo, String> {
+    let reader = Cursor::new(data);
 
     match WebPDecoder::new(reader) {
         Ok(decoder) => Ok(WebpInfo::new_valid(&decoder)),
@@ -53,11 +51,11 @@ pub struct WebpValidationResult {
 ///
 /// # Safety
 /// Caller must ensure:
-/// 1. `path` is a valid null-terminated C string
+/// 1. `data` is a valid pointer to a byte array of length `len`
 /// 2. `error_message` is freed using `free_error_message`
 #[no_mangle]
-pub unsafe extern "C" fn validate_webp_ffi(path: *const c_char) -> WebpValidationResult {
-    if path.is_null() {
+pub unsafe extern "C" fn validate_webp_ffi(data: *const u8, len: usize) -> WebpValidationResult {
+    if data.is_null() {
         return WebpValidationResult {
             is_valid: false,
             width: 0,
@@ -65,27 +63,13 @@ pub unsafe extern "C" fn validate_webp_ffi(path: *const c_char) -> WebpValidatio
             has_alpha: false,
             is_animated: false,
             num_frames: 0,
-            error_message: CString::new("path is null").unwrap().into_raw(),
+            error_message: CString::new("data pointer is null").unwrap().into_raw(),
         };
     }
 
-    let c_str = unsafe { CStr::from_ptr(path) };
-    let path_str = match c_str.to_str() {
-        Ok(s) => s,
-        Err(_) => {
-            return WebpValidationResult {
-                is_valid: false,
-                width: 0,
-                height: 0,
-                has_alpha: false,
-                is_animated: false,
-                num_frames: 0,
-                error_message: CString::new("invalid utf-8 in path").unwrap().into_raw(),
-            };
-        }
-    };
+    let slice = unsafe { std::slice::from_raw_parts(data, len) };
 
-    match validate_webp(path_str) {
+    match validate_webp(slice) {
         Ok(info) => WebpValidationResult {
             is_valid: true,
             width: info.width,
@@ -125,10 +109,12 @@ pub unsafe extern "C" fn free_error_message(error_message: *mut c_char) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     #[test]
     fn test_validate_dynamic_webp() {
-        let result = validate_webp("images/dynamic.webp");
+        let data = fs::read("images/dynamic.webp").expect("failed to read file");
+        let result = validate_webp(&data);
 
         assert!(result.is_ok(), "dynamic webp should pass validation");
 
@@ -152,7 +138,8 @@ mod tests {
 
     #[test]
     fn test_validate_static_webp() {
-        let result = validate_webp("images/static.webp");
+        let data = fs::read("images/static.webp").expect("failed to read file");
+        let result = validate_webp(&data);
 
         assert!(result.is_ok(), "static webp should pass validation");
 
@@ -171,7 +158,8 @@ mod tests {
 
     #[test]
     fn test_validate_fake_webp() {
-        let result = validate_webp("images/fake.webp");
+        let data = fs::read("images/fake.webp").expect("failed to read file");
+        let result = validate_webp(&data);
 
         assert!(result.is_err(), "fake webp should fail validation");
 
@@ -191,24 +179,9 @@ mod tests {
     }
 
     #[test]
-    fn test_validate_nonexistent_file() {
-        let result = validate_webp("images/nonexistent.webp");
-
-        assert!(result.is_err(), "nonexistent file should return error");
-
-        let error = result.unwrap_err();
-        assert!(
-            error.contains("failed to open file"),
-            "error should contain 'failed to open file'"
-        );
-
-        println!("nonexistent file test passed:");
-        println!("  error message: {}", error);
-    }
-
-    #[test]
     fn test_webp_info_debug() {
-        let result = validate_webp("images/static.webp");
+        let data = fs::read("images/static.webp").expect("failed to read file");
+        let result = validate_webp(&data);
         assert!(result.is_ok());
 
         let info = result.unwrap();

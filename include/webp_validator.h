@@ -27,10 +27,11 @@ extern "C"
     /**
      * Validate WebP image file
      *
-     * @param path WebP file path (null-terminated C string)
+     * @param data Pointer to WebP file data
+     * @param len Length of the data in bytes
      * @return WebpValidationResult
      */
-    WebpValidationResult validate_webp_ffi(const char *path);
+    WebpValidationResult validate_webp_ffi(const uint8_t *data, size_t len);
 
     /**
      * Free error message memory allocated by validate_webp_ffi

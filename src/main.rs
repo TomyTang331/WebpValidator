@@ -7,7 +7,8 @@ fn main() {
     let test_file = "images/static.webp";
 
     println!("validating: {}", test_file);
-    match validate_webp(test_file) {
+    let data = std::fs::read(test_file).expect("failed to read file");
+    match validate_webp(&data) {
         Ok(info) => {
             println!("valid webp file");
             println!("  dimensions: {}x{}", info.width, info.height);
